@@ -18,6 +18,18 @@ module Fluent::Plugin
 
     config_param :key, :string
 
+    def labels(record, expander)
+      label = {}
+      labels.each do |k, v|
+        if v.is_a?(String)
+          label[k] = expander.expand(v)
+        else
+          label[k] = v.call(record)
+        end
+      end
+      label
+    end
+
     def configure(conf)
       super
       @labels = parse_labels_elements(conf)
@@ -50,7 +62,7 @@ module Fluent::Plugin
           value = @key.call(record)
         end
         if value
-          gauge.set(labels(record, expander, @labels), value)
+          gauge.set(labels(record, expander), value)
         end
       end
     end
