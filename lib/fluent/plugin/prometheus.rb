@@ -132,6 +132,18 @@ module Fluent
         end
       end
 
+      def labels(record, expander, base_labels)
+        label = {}
+        base_labels.each do |k, v|
+          if v.is_a?(String)
+            label[k] = expander.expand(v)
+          else
+            label[k] = v.call(record)
+          end
+        end
+        label
+      end
+
       class Metric
         attr_reader :type
         attr_reader :name
@@ -151,18 +163,6 @@ module Fluent
 
           @base_labels = Fluent::Plugin::Prometheus.parse_labels_elements(element)
           @base_labels = labels.merge(@base_labels)
-        end
-
-        def labels(record, expander)
-          label = {}
-          @base_labels.each do |k, v|
-            if v.is_a?(String)
-              label[k] = expander.expand(v)
-            else
-              label[k] = v.call(record)
-            end
-          end
-          label
         end
 
         def self.get(registry, name, type, docstring)
@@ -201,7 +201,7 @@ module Fluent
             value = @key.call(record)
           end
           if value
-            @gauge.set(labels(record, expander), value)
+            @gauge.set(labels(record, expander, @base_labels), value)
           end
         end
       end
@@ -229,7 +229,7 @@ module Fluent
           # ignore if record value is nil
           return if value.nil?
 
-          @counter.increment(labels(record, expander), value)
+          @counter.increment(labels(record, expander, @base_labels), value)
         end
       end
 
@@ -254,7 +254,7 @@ module Fluent
             value = @key.call(record)
           end
           if value
-            @summary.observe(labels(record, expander), value)
+            @summary.observe(labels(record, expander, @base_labels), value)
           end
         end
       end
@@ -287,7 +287,7 @@ module Fluent
             value = @key.call(record)
           end
           if value
-            @histogram.observe(labels(record, expander), value)
+            @histogram.observe(labels(record, expander, @base_labels), value)
           end
         end
       end
